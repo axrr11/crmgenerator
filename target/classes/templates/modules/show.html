@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Detalle')}"></head>
+<body>
+<th:block th:replace="~{fragments :: sidebar(${modulesNav})}"></th:block>
+<div class="main">
+    <th:block th:replace="~{fragments :: topbar}"></th:block>
+    <div class="p-4">
+        <div class="page-hero d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h1 class="h3 mb-0" th:text="${module.name} + ' #' + ${item['id']}">Det</h1>
+            </div>
+            <div class="d-flex gap-2">
+                <a th:if="${canUpdate}" th:href="@{'/crm/' + ${module.slug} + '/' + ${item['id']} + '/edit'}" class="btn btn-corp btn-sm">Editar</a>
+                <a th:href="@{'/crm/' + ${module.slug}}" class="btn btn-outline-secondary btn-sm">Volver</a>
+            </div>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+        <div class="row g-4">
+            <div th:class="${module.type == 'sales'} ? 'col-lg-7' : 'col-12'">
+                <div class="panel">
+                    <div class="panel-header"><h2>Información</h2></div>
+                    <div class="panel-body has-pad">
+                        <div class="row g-4">
+                            <div class="col-md-6" th:if="${clientName != null}">
+                                <div class="text-muted small text-uppercase">Cliente</div>
+                                <div class="fw-semibold">
+                                    <a th:if="${item['cliente_id'] != null}"
+                                       th:href="@{'/crm/clientes/' + ${item['cliente_id']}}"
+                                       th:text="${clientName}">Cliente</a>
+                                    <span th:if="${item['cliente_id'] == null}" th:text="${clientName}">—</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6" th:each="f : ${module.fields}">
+                                <div class="text-muted small text-uppercase" th:text="${f['label']}">L</div>
+                                <div th:if="${f['type'] == 'image'}">
+                                    <img th:if="${item[f['name']] != null}" th:src="${item[f['name']]}"
+                                         alt="" style="max-width:180px;border-radius:10px;border:1px solid #e2e8f0">
+                                    <span th:if="${item[f['name']] == null}" class="text-muted">—</span>
+                                </div>
+                                <div th:if="${f['type'] == 'color'}" class="d-flex align-items-center gap-2">
+                                    <span th:if="${item[f['name']] != null}"
+                                          th:style="'display:inline-block;width:22px;height:22px;border-radius:50%;border:1px solid #cbd5e1;background:' + ${item[f['name']]}"></span>
+                                    <span class="fw-semibold" th:text="${item[f['name']]} ?: '—'"></span>
+                                </div>
+                                <div class="fw-semibold" th:if="${f['type'] != 'image' and f['type'] != 'color'}"
+                                     th:text="${item[f['name']]} ?: '—'">v</div>
+                            </div>
+                            <div class="col-md-6" th:if="${module.hasOwner and item['owner_name'] != null}">
+                                <div class="text-muted small text-uppercase">Dueño</div>
+                                <div class="fw-semibold" th:text="${item['owner_name']}">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5" th:if="${module.type == 'sales'}">
+                <div class="panel mb-3">
+                    <div class="panel-header"><h2>Cobranza / Cuotas</h2></div>
+                    <div class="panel-body has-pad">
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <div class="text-muted small">Total</div>
+                                <div class="fw-bold" th:text="${#numbers.formatDecimal(saleTotal, 1, 2)}">0</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted small">Pagado</div>
+                                <div class="fw-bold text-success" th:text="${#numbers.formatDecimal(paidSum, 1, 2)}">0</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted small">Saldo</div>
+                                <div class="fw-bold text-danger" th:text="${#numbers.formatDecimal(saleBalance, 1, 2)}">0</div>
+                            </div>
+                        </div>
+                        <table class="data-table mb-3">
+                            <thead>
+                            <tr><th>Cuota</th><th>Vence</th><th>Monto</th><th>Estado</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="p : ${payments}">
+                                <td th:text="${p.installment} ?: '—'">1</td>
+                                <td class="small" th:text="${p.dueDate} ?: (p.paidAt ?: '—')">—</td>
+                                <td th:text="${p.amount}">0</td>
+                                <td>
+                                    <span class="badge-status"
+                                          th:classappend="${p.status == 'paid'} ? ' success' : ' warning'"
+                                          th:text="${p.status == 'paid'} ? 'Pagada' : 'Pendiente'">ok</span>
+                                </td>
+                                <td class="text-end">
+                                    <form th:if="${canUpdate and p.status != 'paid'}"
+                                          th:action="@{'/crm/' + ${module.slug} + '/' + ${item['id']} + '/payments'}"
+                                          method="post" class="d-inline">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <input type="hidden" name="payment_id" th:value="${p.id}"/>
+                                        <input type="hidden" name="amount" th:value="${p.amount}"/>
+                                        <button class="btn btn-sm btn-corp">Marcar pagada</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(payments)}">
+                                <td colspan="5" class="text-muted text-center">Sin cuotas ni pagos</td>
+                            </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Registrar pago libre -->
+                        <div th:if="${canUpdate}" class="border-top pt-3">
+                            <h3 class="h6">Registrar pago</h3>
+                            <form th:action="@{'/crm/' + ${module.slug} + '/' + ${item['id']} + '/payments'}" method="post" class="row g-2 align-items-end">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <div class="col-4">
+                                    <label class="form-label small">Monto</label>
+                                    <input type="number" step="0.01" min="0.01" name="amount" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small">Fecha</label>
+                                    <input type="date" name="paid_at" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small">Método</label>
+                                    <select name="method" class="form-select form-select-sm">
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="transferencia">Transferencia</option>
+                                        <option value="tarjeta">Tarjeta</option>
+                                        <option value="otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small">Nota</label>
+                                    <input type="text" name="note" class="form-control form-control-sm" placeholder="Opcional">
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-corp btn-sm">Guardar pago</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Generar cuotas si no hay -->
+                        <div th:if="${canUpdate and #lists.isEmpty(payments)}" class="border-top pt-3 mt-3">
+                            <h3 class="h6">Generar cuotas</h3>
+                            <form th:action="@{'/crm/' + ${module.slug} + '/' + ${item['id']} + '/installments'}" method="post" id="gen-cuotas-form">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <div class="row g-2 align-items-end mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label small">Nº cuotas</label>
+                                        <input type="number" name="installments" id="show-installments" min="2" max="24" value="3" class="form-control form-control-sm" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Generar</button>
+                                    </div>
+                                </div>
+                                <div id="show-due-dates" class="row g-2"></div>
+                            </form>
+                            <script>
+                            (function(){
+                              var nInput = document.getElementById('show-installments');
+                              var box = document.getElementById('show-due-dates');
+                              if (!nInput || !box) return;
+                              function addMonths(d,m){var x=new Date(d.getTime());x.setMonth(x.getMonth()+m);return x;}
+                              function fmt(d){return d.toISOString().slice(0,10);}
+                              function render(){
+                                var n=parseInt(nInput.value,10)||3; if(n<2)n=2; if(n>24)n=24;
+                                var html='', base=new Date(); base.setMonth(base.getMonth()+1);
+                                for(var i=0;i<n;i++){
+                                  html+='<div class="col-6"><label class="form-label small">Cuota '+(i+1)+'</label>'+
+                                    '<input type="date" name="due_dates" class="form-control form-control-sm" value="'+fmt(addMonths(base,i))+'" required></div>';
+                                }
+                                box.innerHTML=html;
+                              }
+                              nInput.addEventListener('change', render);
+                              nInput.addEventListener('input', render);
+                              render();
+                            })();
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

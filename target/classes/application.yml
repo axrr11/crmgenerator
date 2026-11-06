@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: crm-generator-spring
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:crm_generator}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${DB_USER:crm}
+    password: ${DB_PASSWORD:secret}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  thymeleaf:
+    cache: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+      connect-timeout: 2000ms
+      client-type: lettuce
+  autoconfigure:
+    exclude: []
+  cache:
+    type: simple
+    redis:
+      time-to-live: 120000
+      cache-null-values: false
+      key-prefix: "crm:"
+
+server:
+  port: 8080
+
+crm:
+  generator:
+    output-dir: generated
+    allowed-subject-prefix: com.crmgenerator.generated.domain.
+  uploads-dir: uploads
+  backups-dir: backups
+  cache:
+    enabled: true
+    search-ttl-seconds: 120
+
+logging:
+  level:
+    com.crmgenerator: INFO

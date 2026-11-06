@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Dashboard')}"></head>
+<body>
+<th:block th:replace="~{fragments :: sidebar(${modulesNav})}"></th:block>
+<div class="main">
+    <th:block th:replace="~{fragments :: topbar}"></th:block>
+    <div class="p-4">
+        <div class="page-hero d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h1 class="h3 mb-1">CRM Dashboard</h1>
+                <p class="mb-0 opacity-75">Resumen y actividad del sistema</p>
+            </div>
+        </div>
+        <div th:if="${isPlatformAdmin and !viewingAsTenant}" class="alert alert-info">
+            Estás en el <strong>panel de plataforma</strong>. No se listan módulos de negocios.
+            Ve a <a th:href="@{/admin/tenants}">Negocios</a> y pulsa <em>Entrar</em> para operar como un negocio.
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3" th:each="s : ${stats}">
+                <a th:href="@{'/crm/' + ${s.slug}}" class="text-decoration-none">
+                    <div class="kpi-card">
+                        <div class="kpi-label" th:text="${s.name}">Mod</div>
+                        <div class="kpi-value" th:text="${s.count}">0</div>
+                        <div class="small text-muted mt-1" th:text="${s.type}">type</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-12" th:if="${#lists.isEmpty(stats)}">
+                <div class="panel"><div class="panel-body has-pad text-muted">
+                    Aún no hay módulos. <a th:href="@{/admin/modules/create}">Crear el primero</a>
+                </div></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Actividad del sistema</h2>
+            </div>
+            <div class="p-3 border-bottom">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small">Acción</label>
+                        <select name="action" class="form-select form-select-sm">
+                            <option value="">Todas</option>
+                            <option value="create" th:selected="${filterAction == 'create'}">Crear</option>
+                            <option value="update" th:selected="${filterAction == 'update'}">Actualizar</option>
+                            <option value="delete" th:selected="${filterAction == 'delete'}">Eliminar</option>
+                            <option value="payment" th:selected="${filterAction == 'payment'}">Pagos / cuotas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Módulo</label>
+                        <select name="module" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            <option th:each="m : ${modules}" th:value="${m.slug}" th:text="${m.name}"
+                                    th:selected="${filterModule == m.slug}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Usuario</label>
+                        <select name="userId" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            <option th:each="u : ${users}" th:value="${u.id}" th:text="${u.name}"
+                                    th:selected="${filterUserId != null and filterUserId == u.id}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Desde</label>
+                        <input type="date" name="from" class="form-control form-control-sm" th:value="${filterFrom}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Hasta</label>
+                        <input type="date" name="to" class="form-control form-control-sm" th:value="${filterTo}">
+                    </div>
+                    <div class="col-md-2 d-flex gap-2">
+                        <button class="btn btn-corp btn-sm flex-grow-1">Filtrar</button>
+                        <a th:href="@{/}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+                    </div>
+                </form>
+            </div>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Módulo</th>
+                    <th>Detalle</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="a : ${auditLogs}">
+                    <td class="small text-muted" th:text="${#temporals.format(a.createdAt, 'dd/MM/yyyy HH:mm')}">fecha</td>
+                    <td>
+                        <div class="fw-semibold" th:text="${a.userName} ?: '—'">user</div>
+                        <div class="small text-muted" th:text="${a.userEmail}"></div>
+                    </td>
+                    <td>
+                        <span class="badge-status"
+                              th:classappend="${a.action == 'create'} ? ' success' : (${a.action == 'delete'} ? ' danger' : (${a.action == 'payment'} ? ' warning' : ' info'))"
+                              th:text="${a.action}">create</span>
+                    </td>
+                    <td>
+                        <a th:if="${a.moduleSlug != null and a.recordId != null}"
+                           th:href="@{'/crm/' + ${a.moduleSlug} + '/' + ${a.recordId}}"
+                           th:text="${a.moduleName} ?: a.moduleSlug">mod</a>
+                        <span th:if="${a.moduleSlug == null}" class="text-muted">—</span>
+                    </td>
+                    <td th:text="${a.summary}">sum</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(auditLogs)}">
+                    <td colspan="5" class="text-center text-muted p-4">Sin actividad con estos filtros</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

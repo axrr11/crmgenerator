@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${module.name})}"></head>
+<body>
+<th:block th:replace="~{fragments :: sidebar(${modulesNav})}"></th:block>
+<div class="main">
+    <th:block th:replace="~{fragments :: topbar}"></th:block>
+    <div class="p-4">
+        <div class="page-hero d-flex justify-content-between align-items-start">
+            <div>
+                <h1 class="h3 mb-1" th:text="${module.name}">Mod</h1>
+                <p class="mb-0 opacity-75" th:text="${total} + ' registro(s)'">0</p>
+            </div>
+            <a th:if="${canCreate}" th:href="@{'/crm/' + ${module.slug} + '/create'}" class="btn btn-light btn-sm">+ Nuevo</a>
+        </div>
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+        <div class="panel">
+            <div class="p-3 border-bottom">
+                <form method="get" class="d-flex gap-2">
+                    <input type="search" name="q" th:value="${q}" class="form-control form-control-sm" style="max-width:220px" placeholder="Buscar...">
+                    <button class="btn btn-sm btn-outline-secondary">Buscar</button>
+                </form>
+            </div>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th th:each="f : ${module.fields}" th:text="${f['label']}">col</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${items}">
+                    <td th:text="${item['id']}">1</td>
+                    <td th:each="f : ${module.fields}">
+                        <th:block th:if="${f['type'] == 'image'}">
+                            <img th:if="${item[f['name']] != null}" th:src="${item[f['name']]}"
+                                 alt="" style="width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0">
+                            <span th:if="${item[f['name']] == null}" class="text-muted">—</span>
+                        </th:block>
+                        <th:block th:if="${f['type'] == 'color'}">
+                            <span th:if="${item[f['name']] != null}"
+                                  th:style="'display:inline-block;width:18px;height:18px;border-radius:50%;border:1px solid #cbd5e1;vertical-align:middle;background:' + ${item[f['name']]}"></span>
+                            <span class="small ms-1" th:text="${item[f['name']]} ?: '—'"></span>
+                        </th:block>
+                        <th:block th:if="${f['type'] != 'image' and f['type'] != 'color'}">
+                            <span th:text="${item[f['name']] != null ? item[f['name']] : '—'}">v</span>
+                        </th:block>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a th:href="@{'/crm/' + ${module.slug} + '/' + ${item['id']}}" class="btn btn-sm btn-outline-secondary">Ver</a>
+                        <a th:if="${canUpdate}" th:href="@{'/crm/' + ${module.slug} + '/' + ${item['id']} + '/edit'}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                        <form th:if="${canDelete}" th:action="@{'/crm/' + ${module.slug} + '/' + ${item['id']} + '/delete'}" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar?')">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <button class="btn btn-sm btn-outline-danger">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${items == null or #lists.isEmpty(items)}"><td colspan="99" class="text-center text-muted p-4">Sin registros</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

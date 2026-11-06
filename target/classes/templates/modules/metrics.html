@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${module.name})}"></head>
+<body>
+<th:block th:replace="~{fragments :: sidebar(${modulesNav})}"></th:block>
+<div class="main">
+    <th:block th:replace="~{fragments :: topbar}"></th:block>
+    <div class="p-4">
+        <div class="page-hero">
+            <h1 class="h3" th:text="${module.name}">Métricas</h1>
+            <p class="mb-0 opacity-75">KPIs y evolución</p>
+        </div>
+
+        <div th:if="${kpis != null and kpis['error'] != null}" class="alert alert-danger" th:text="${kpis['error']}"></div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3" th:each="m,stat : ${module.metrics}">
+                <div class="kpi-card">
+                    <div class="kpi-label" th:text="${m['label']}">KPI</div>
+                    <div class="kpi-value" th:text="${kpis != null and kpis['kpi_' + stat.index] != null ? kpis['kpi_' + stat.index] : 0}">0</div>
+                </div>
+            </div>
+            <div class="col-12" th:if="${module.metrics == null or #lists.isEmpty(module.metrics)}">
+                <div class="panel"><div class="panel-body has-pad text-muted">Este módulo de métricas no tiene KPIs configurados.</div></div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header"><h2>Últimos 30 días</h2></div>
+            <div class="panel-body has-pad">
+                <canvas id="chart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+const chart = /*[[${kpis != null ? kpis.chart : null}]]*/ [];
+const labels = (chart || []).map(r => r.period);
+const values = (chart || []).map(r => Number(r.value));
+new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: { labels, datasets: [{ data: values, borderColor: '#1e3a5f', backgroundColor: 'rgba(30,58,95,.12)', fill: true, tension: .3 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+</script>
+</body>
+</html>

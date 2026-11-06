@@ -1,0 +1,57 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: crm-spring-db
+    environment:
+      MYSQL_DATABASE: crm_generator
+      MYSQL_USER: crm
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - crm_spring_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: crm-spring-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    image: maven:3.9-eclipse-temurin-21
+    container_name: crm-spring-app
+    working_dir: /app
+    volumes:
+      - .:/app
+      - m2_cache:/root/.m2
+    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dspring.datasource.url=jdbc:mysql://db:3306/crm_generator?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC -Dspring.data.redis.host=redis"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: crm_generator
+      DB_USER: crm
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  crm_spring_mysql:
+  m2_cache:

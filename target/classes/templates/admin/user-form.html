@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Usuario')}"></head>
+<body>
+<th:block th:replace="~{fragments :: sidebar(${modulesNav})}"></th:block>
+<div class="main">
+    <th:block th:replace="~{fragments :: topbar}"></th:block>
+    <div class="p-4">
+        <div class="page-hero">
+            <h1 class="h3" th:text="${user.id != null} ? 'Editar usuario' : 'Nuevo usuario'">Usuario</h1>
+        </div>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+        <form th:action="@{/admin/users}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="id" th:if="${user.id != null}" th:value="${user.id}"/>
+
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="panel">
+                        <div class="panel-header"><h2>Datos</h2></div>
+                        <div class="panel-body has-pad">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre</label>
+                                <input name="name" class="form-control" th:value="${user.name}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" th:value="${user.email}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" th:text="${user.id != null} ? 'Nueva contraseña (opcional)' : 'Contraseña'">Pass</label>
+                                <input type="password" name="password" class="form-control"
+                                       th:required="${user.id == null}" minlength="6">
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label">Rol</label>
+                                <select name="role" id="role-select" class="form-select" required>
+                                    <option value="creator" th:selected="${user.role == 'creator' or user.role == 'admin'}">Creador — acceso total (sobre el dueño)</option>
+                                    <option value="owner" th:selected="${user.role == 'owner'}">Dueño — acceso total</option>
+                                    <option value="user" th:selected="${user.role == 'user' or user.role == 'seller' or user.role == null}">Usuario — solo módulos asignados</option>
+                                    <option value="visitor" th:selected="${user.role == 'visitor' or user.role == 'viewer'}">Visitante — solo lectura en módulos asignados</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="panel" id="modules-panel">
+                        <div class="panel-header">
+                            <h2>Módulos y permisos</h2>
+                        </div>
+                        <div class="panel-body has-pad">
+                            <p class="text-muted small" id="perm-hint">
+                                Marca los módulos a los que tendrá acceso y qué puede hacer en cada uno.
+                                Los roles <strong>Creador</strong> y <strong>Dueño</strong> ignoran esta tabla (acceso total).
+                            </p>
+                            <div th:if="${#lists.isEmpty(allModules)}" class="text-muted">No hay módulos creados todavía.</div>
+                            <table class="data-table" th:if="${!#lists.isEmpty(allModules)}">
+                                <thead>
+                                <tr>
+                                    <th>Módulo</th>
+                                    <th class="text-center">Asignar</th>
+                                    <th class="text-center">Lectura</th>
+                                    <th class="text-center">Crear</th>
+                                    <th class="text-center">Editar</th>
+                                    <th class="text-center">Eliminar</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="m : ${allModules}">
+                                    <td>
+                                        <strong th:text="${m.name}">Mod</strong>
+                                        <div class="small text-muted" th:text="${m.slug}"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="module_slug" th:value="${m.slug}" class="form-check-input mod-assign"
+                                               th:checked="${permMap[m.slug] != null}">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="can_read" th:value="${m.slug}" class="form-check-input perm-read"
+                                               th:checked="${permMap[m.slug] != null and permMap[m.slug].canRead}">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="can_create" th:value="${m.slug}" class="form-check-input perm-write"
+                                               th:checked="${permMap[m.slug] != null and permMap[m.slug].canCreate}">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="can_update" th:value="${m.slug}" class="form-check-input perm-write"
+                                               th:checked="${permMap[m.slug] != null and permMap[m.slug].canUpdate}">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="can_delete" th:value="${m.slug}" class="form-check-input perm-write"
+                                               th:checked="${permMap[m.slug] != null and permMap[m.slug].canDelete}">
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-corp btn-lg">Guardar usuario</button>
+                <a th:href="@{/admin/users}" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function(){
+  const role = document.getElementById('role-select');
+  function sync() {
+    const r = role.value;
+    const visitor = r === 'visitor';
+    const full = r === 'creator' || r === 'owner';
+    document.querySelectorAll('.perm-write').forEach(cb => {
+      cb.disabled = visitor || full;
+      if (visitor) cb.checked = false;
+    });
+    document.querySelectorAll('.perm-read, .mod-assign').forEach(cb => {
+      cb.disabled = full;
+    });
+    document.getElementById('perm-hint').style.opacity = full ? '0.6' : '1';
+  }
+  role.addEventListener('change', sync);
+  sync();
+})();
+</script>
+</body>
+</html>

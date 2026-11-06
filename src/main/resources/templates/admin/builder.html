@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Crear módulo')}"></head>
+<body>
+<th:block th:replace="~{fragments :: sidebar(${modulesNav})}"></th:block>
+<div class="main">
+    <th:block th:replace="~{fragments :: topbar}"></th:block>
+    <div class="p-4">
+        <div class="page-hero">
+            <h1 class="h3 mb-1">Crear módulo</h1>
+            <p class="mb-0 opacity-75">Elige una plantilla o arma uno personalizado en pocos pasos</p>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+        <!-- TEMPLATES -->
+        <h2 class="h6 text-muted text-uppercase mb-3" style="letter-spacing:.06em;font-size:11px;font-weight:600">Plantillas listas</h2>
+        <div class="row g-3 mb-4">
+            <div class="col-md-4 col-lg-3" th:each="pack : ${packs}">
+                <div class="panel h-100" style="cursor:default">
+                    <div class="panel-body has-pad d-flex flex-column h-100">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span style="width:36px;height:36px;border-radius:10px;background:#eff6ff;color:#2563eb;display:inline-flex;align-items:center;justify-content:center;font-size:18px" th:text="${pack.icon}">📦</span>
+                            <strong th:text="${pack.title}">Clientes</strong>
+                        </div>
+                        <p class="text-muted small flex-grow-1 mb-3" th:text="${pack.description}">desc</p>
+                        <form th:action="@{/admin/modules/pack/one}" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="pack_id" th:value="${pack.id}"/>
+                            <button class="btn btn-corp btn-sm w-100" type="submit">Usar esta plantilla</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="panel h-100 border-primary" style="border:1px dashed #93c5fd !important">
+                    <div class="panel-body has-pad d-flex flex-column h-100">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span style="width:36px;height:36px;border-radius:10px;background:#f0fdf4;color:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:18px">🚀</span>
+                            <strong>Pack CRM completo</strong>
+                        </div>
+                        <p class="text-muted small flex-grow-1 mb-3">Clientes + Productos + Ventas (con métricas) de una vez.</p>
+                        <form th:action="@{/admin/modules/pack/crm-basico}" method="post"
+                              onsubmit="return confirm('¿Instalar Clientes, Productos y Ventas?')">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <button class="btn btn-corp btn-sm w-100" type="submit">Instalar pack completo</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CUSTOM WIZARD -->
+        <h2 class="h6 text-muted text-uppercase mb-3" style="letter-spacing:.06em;font-size:11px;font-weight:600">O personalizado</h2>
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Asistente rápido</h2>
+                <div class="d-flex gap-2">
+                    <span class="badge-status info" id="step-badge">Paso 1 de 3</span>
+                </div>
+            </div>
+            <div class="panel-body has-pad">
+                <form th:action="@{/admin/modules}" method="post" id="wizard-form">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                    <!-- Step 1 -->
+                    <div class="wizard-step" data-step="1">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre del módulo *</label>
+                                <input name="name" id="mod-name" class="form-control form-control-lg" required
+                                       placeholder="Ej: Proveedores, Contratos, Leads">
+                                <div class="form-text">El identificador interno se genera solo.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">¿Para qué lo usarás? *</label>
+                                <div class="row g-2" id="type-cards">
+                                    <div class="col-6" th:each="t : ${moduleTypes}">
+                                        <label class="type-card w-100">
+                                            <input type="radio" name="type" th:value="${t.name().toLowerCase()}"
+                                                   th:checked="${t.name() == 'CATALOG'}" required class="d-none type-radio">
+                                            <div class="type-card-inner">
+                                                <strong th:text="${t.simpleLabel()}">Listado</strong>
+                                                <span class="small text-muted d-block" th:text="${t.simpleHint()}">hint</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Descripción (opcional)</label>
+                                <input name="description" class="form-control" placeholder="Breve descripción para tu equipo">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="wizard-step d-none" data-step="2">
+                        <p class="text-muted small mb-3">Marca los campos que necesitas. Puedes agregar más después desde Editar módulo.</p>
+                        <div id="suggested-fields" class="row g-2 mb-3"></div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-add-custom">+ Campo extra</button>
+                        <div id="custom-fields" class="mt-3"></div>
+                        <!-- Hidden containers filled by JS before submit -->
+                        <div id="fields-hidden"></div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="wizard-step d-none" data-step="3">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" name="has_owner" value="1" id="ho" checked>
+                                    <label class="form-check-label" for="ho">Asignar responsable a cada registro</label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" name="has_activities" value="1" id="ha" checked>
+                                    <label class="form-check-label" for="ha">Permitir notas y actividades</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="panel mb-0" style="background:#f8fafc">
+                                    <div class="panel-body has-pad">
+                                        <div class="small text-muted mb-1">Resumen</div>
+                                        <div class="fw-semibold" id="sum-name">—</div>
+                                        <div class="small text-muted" id="sum-type">—</div>
+                                        <div class="small mt-2" id="sum-fields">—</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" id="btn-prev" disabled>Atrás</button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-corp" id="btn-next">Siguiente</button>
+                            <button type="submit" class="btn btn-corp d-none" id="btn-submit">Crear módulo</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+.type-card { cursor: pointer; }
+.type-card-inner {
+    border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px;
+    background: #fff; transition: border-color .15s, box-shadow .15s; height: 100%;
+}
+.type-card input:checked + .type-card-inner {
+    border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); background: #eff6ff;
+}
+.field-chip {
+    border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; background: #fff;
+    display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+}
+.field-chip:has(input:checked) { border-color: #3b82f6; background: #eff6ff; }
+.field-chip input { width: 16px; height: 16px; }
+</style>
+<script>
+const SUGGESTIONS = {
+  catalog: [
+    {name:'nombre', label:'Nombre', type:'string', required:true},
+    {name:'imagen', label:'Foto / imagen', type:'image', required:false},
+    {name:'color', label:'Color', type:'color', required:false},
+    {name:'talla', label:'Talla', type:'size', required:false, options:'XS,S,M,L,XL,XXL,Único'},
+    {name:'precio', label:'Precio', type:'decimal', required:false},
+    {name:'estado', label:'Estado', type:'select', required:false, options:'Activo,Inactivo'}
+  ],
+  sales: [
+    {name:'titulo', label:'Título', type:'string', required:true},
+    {name:'total', label:'Total', type:'decimal', required:true},
+    {name:'monto_pagado', label:'Pagado', type:'decimal', required:false},
+    {name:'saldo', label:'Saldo', type:'decimal', required:false},
+    {name:'estado', label:'Estado', type:'select', required:true, options:'Pendiente,Parcial,Pagado,Anulado'}
+  ],
+  kanban: [
+    {name:'titulo', label:'Título', type:'string', required:true},
+    {name:'estado', label:'Etapa', type:'select', required:true, options:'Nuevo,En progreso,Ganado,Perdido'},
+    {name:'monto', label:'Monto', type:'decimal', required:false}
+  ],
+  form: [
+    {name:'nombre', label:'Nombre', type:'string', required:true},
+    {name:'email', label:'Email', type:'email', required:false},
+    {name:'mensaje', label:'Mensaje', type:'text', required:false},
+    {name:'estado', label:'Estado', type:'select', required:false, options:'Nuevo,Atendido'}
+  ],
+  metrics: [
+    {name:'nombre', label:'Nombre', type:'string', required:false}
+  ]
+};
+
+const typeLabels = {
+  catalog: 'Listado / catálogo',
+  sales: 'Ventas y cobros',
+  kanban: 'Tablero por etapas',
+  form: 'Formulario de captura',
+  metrics: 'Indicadores'
+};
+
+let step = 1;
+const maxStep = 3;
+
+function selectedType() {
+  const r = document.querySelector('input[name="type"]:checked');
+  return r ? r.value : 'catalog';
+}
+
+function renderSuggestions() {
+  const type = selectedType();
+  const list = SUGGESTIONS[type] || SUGGESTIONS.catalog;
+  const box = document.getElementById('suggested-fields');
+  box.innerHTML = list.map((f,i) => `
+    <div class="col-md-6">
+      <label class="field-chip">
+        <input type="checkbox" class="sug-field" data-idx="${i}" checked>
+        <span>
+          <strong>${f.label}</strong>
+          <span class="text-muted small d-block">${f.type}${f.required?' · obligatorio':''}</span>
+        </span>
+      </label>
+    </div>`).join('');
+  box.dataset.type = type;
+}
+
+function collectFields() {
+  const type = selectedType();
+  const list = SUGGESTIONS[type] || SUGGESTIONS.catalog;
+  const fields = [];
+  document.querySelectorAll('.sug-field:checked').forEach(cb => {
+    fields.push(list[Number(cb.dataset.idx)]);
+  });
+  document.querySelectorAll('.custom-field-row').forEach(row => {
+    const name = row.querySelector('.cf-name').value.trim();
+    const label = row.querySelector('.cf-label').value.trim();
+    const ftype = row.querySelector('.cf-type').value;
+    if (name && label) {
+      fields.push({name, label, type: ftype, required: row.querySelector('.cf-req').checked});
+    }
+  });
+  return fields;
+}
+
+function fillHiddenFields() {
+  const fields = collectFields();
+  const box = document.getElementById('fields-hidden');
+  box.innerHTML = '';
+  fields.forEach((f, i) => {
+    box.innerHTML += `
+      <input type="hidden" name="fields_name" value="${f.name}">
+      <input type="hidden" name="fields_label" value="${f.label}">
+      <input type="hidden" name="fields_type" value="${f.type}">
+      <input type="hidden" name="fields_options" value="${f.options||''}">
+      ${f.required ? `<input type="hidden" name="fields_required" value="${i}">` : ''}`;
+  });
+  return fields.length > 0;
+}
+
+function showStep(n) {
+  step = n;
+  document.querySelectorAll('.wizard-step').forEach(el => {
+    el.classList.toggle('d-none', Number(el.dataset.step) !== n);
+  });
+  document.getElementById('step-badge').textContent = `Paso ${n} de ${maxStep}`;
+  document.getElementById('btn-prev').disabled = n === 1;
+  document.getElementById('btn-next').classList.toggle('d-none', n === maxStep);
+  document.getElementById('btn-submit').classList.toggle('d-none', n !== maxStep);
+  if (n === 2) renderSuggestions();
+  if (n === 3) {
+    document.getElementById('sum-name').textContent = document.getElementById('mod-name').value || '—';
+    document.getElementById('sum-type').textContent = typeLabels[selectedType()] || selectedType();
+    const fields = collectFields();
+    document.getElementById('sum-fields').textContent = fields.length
+      ? ('Campos: ' + fields.map(f => f.label).join(', '))
+      : 'Sin campos seleccionados';
+  }
+}
+
+document.getElementById('btn-next').onclick = () => {
+  if (step === 1) {
+    const name = document.getElementById('mod-name').value.trim();
+    if (!name) { alert('Indica un nombre para el módulo'); return; }
+  }
+  if (step === 2) {
+    if (collectFields().length === 0) { alert('Selecciona al menos un campo'); return; }
+  }
+  if (step < maxStep) showStep(step + 1);
+};
+document.getElementById('btn-prev').onclick = () => { if (step > 1) showStep(step - 1); };
+
+document.getElementById('wizard-form').addEventListener('submit', (e) => {
+  if (!fillHiddenFields()) {
+    e.preventDefault();
+    alert('Selecciona al menos un campo');
+    showStep(2);
+  }
+});
+
+document.querySelectorAll('.type-radio').forEach(r => r.addEventListener('change', () => {
+  if (step === 2) renderSuggestions();
+}));
+
+let customIdx = 0;
+document.getElementById('btn-add-custom').onclick = () => {
+  const div = document.createElement('div');
+  div.className = 'custom-field-row field-row row g-2 align-items-end mb-2';
+  div.innerHTML = `
+    <div class="col-md-3"><label class="form-label small">Nombre interno</label>
+      <input class="form-control form-control-sm cf-name" pattern="[a-zA-Z][a-zA-Z0-9_]*" placeholder="ciudad" required></div>
+    <div class="col-md-3"><label class="form-label small">Etiqueta</label>
+      <input class="form-control form-control-sm cf-label" placeholder="Ciudad" required></div>
+    <div class="col-md-3"><label class="form-label small">Tipo</label>
+      <select class="form-select form-select-sm cf-type">
+        <option value="string">Texto</option>
+        <option value="decimal">Dinero / número</option>
+        <option value="integer">Número entero</option>
+        <option value="date">Fecha</option>
+        <option value="email">Email</option>
+        <option value="phone">Teléfono</option>
+        <option value="select">Lista</option>
+        <option value="image">Imagen / foto</option>
+        <option value="color">Color</option>
+        <option value="size">Talla</option>
+        <option value="text">Texto largo</option>
+      </select></div>
+    <div class="col-md-2"><div class="form-check mt-3">
+      <input type="checkbox" class="form-check-input cf-req" id="cr${customIdx}">
+      <label class="form-check-label small" for="cr${customIdx}">Obligatorio</label></div></div>
+    <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.custom-field-row').remove()">✕</button></div>`;
+  document.getElementById('custom-fields').appendChild(div);
+  customIdx++;
+};
+
+showStep(1);
+</script>
+</body>
+</html>
